@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UG Investment + MTN Real</title>
+<style>
+:root{ --main:#0a3d62; --momo:#ffcc00; --airtel:#ff0000; --bg:#f1f2f6; }
+body{margin:0;font-family:Arial;background:var(--bg)}
+.box{max-width:420px;margin:20px auto;background:white;padding:20px;border-radius:15px;box-shadow:0 5px 15px rgba(0,0,0,0.1)}
+input{width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box}
+button{padding:12px;background:var(--main);color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer}
+button.sm{padding:8px 10px;font-size:11px;margin:2px}
+button.momo{background:var(--momo);color:black}
+button.airtel{background:var(--airtel);color:white}
+.plan{border:1px solid #ddd;padding:12px;border-radius:10px;margin:10px 0}
+.row{display:flex;justify-content:space-between;align-items:center}
+.hidden{display:none}
+.warn{font-size:11px;color:gray;background:#fff3cd;padding:8px;border-radius:6px;margin-top:10px}
+</style>
+</head>
+<body>
+
+<div id="auth" class="box">
+<h2 id="title">Create Account</h2>
+<input id="name" placeholder="Full Name">
+<input id="email" placeholder="Email">
+<input id="pass" type="password" placeholder="Password">
+<button style="width:100%" onclick="handleAuth()" id="btn">Register</button>
+<p style="text-align:center;font-size:14px"><span id="switchText">Already have account?</span> <a href="#" onclick="toggle()">Login</a></p>
+<p style="font-size:11px;text-align:center">Admin: admin@admin.com / admin123</p>
+</div>
+
+<div id="dash" class="box hidden">
+<div class="row"><h3>Hi, <span id="uName"></span></h3><a href="#" onclick="logout()">Logout</a></div>
+<p>Balance: <b>UGX <span id="bal">0</span></b></p>
+<button class="sm" style="background:#00b894" onclick="withdraw()">Withdraw to MoMo</button>
+
+<h4>Plans - EDIT HERE</h4>
+
+<div class="plan">
+<div class="row"><div><b>Starter</b><br><small>100k → 10% in 7 days</small></div></div>
+<div style="margin-top:8px"><button class="sm" onclick="invest(100000,0.10)">Use Balance</button> <button class="sm momo" onclick="payMomo(100000,0.10,'MTN')">MTN MoMo</button> <button class="sm airtel" onclick="payMomo(100000,0.10,'AIRTEL')">Airtel Money</button></div>
+</div>
+
+<div class="plan">
+<div class="row"><div><b>Booster</b><br><small>300k → 25% in 14 days</small></div></div>
+<div style="margin-top:8px"><button class="sm" onclick="invest(300000,0.25)">Use Balance</button> <button class="sm momo" onclick="payMomo(300000,0.25,'MTN')">MTN MoMo</button> <button class="sm airtel" onclick="payMomo(300000,0.25,'AIRTEL')">Airtel Money</button></div>
+</div>
+
+<div class="plan">
+<div class="row"><div><b>Pro</b><br><small>1M → 40% in 30 days</small></div></div>
+<div style="margin-top:8px"><button class="sm" onclick="invest(1000000,0.40)">Use Balance</button> <button class="sm momo" onclick="payMomo(1000000,0.40,'MTN')">MTN MoMo</button> <button class="sm airtel" onclick="payMomo(1000000,0.40,'AIRTEL')">Airtel Money</button></div>
+</div>
+
+<div id="myInv" style="font-size:13px;margin-top:15px"></div>
+<div class="warn">DEMO MODE: No real money charged. For real MTN, edit function payMomoReal() below and add your API Key from momodeveloper.mtn.com</div>
+</div>
+
+<div id="admin" class="box hidden">
+<h3>ADMIN PANEL</h3><div id="userTable" style="font-size:13px"></div>
+<button style="width:100%;background:#d63031;margin-top:10px" onclick="logout()">Logout</button>
+</div>
+
+<script>
+// CONFIG - EDIT YOUR REAL API HERE
+const MTN_CONFIG = {
+  apiKey: "PUT_YOUR_MTN_API_KEY_HERE", // Get from momodeveloper.mtn.com
+  isReal: false // Change to true when you have API key
+};
+
+function getUsers(){ return JSON.parse(localStorage.getItem('all_users')||'[]'); }
+function saveUsers(u){ localStorage.setItem('all_users', JSON.stringify(u)); }
+let isLogin=false;
+function toggle(){ isLogin=!isLogin; document.getElementById('title').innerText=isLogin?'Login':'Create Account'; document.getElementById('btn').innerText=isLogin?'Login':'Register'; document.getElementById('name').style.display=isLogin?'none':'block'; }
+function handleAuth(){
+  let name=document.getElementById('name').value.trim();
+  let email=document.getElementById('email').value.trim().toLowerCase();
+  let pass=document.getElementById('pass').value.trim();
+  if(email==='admin@admin.com' && pass==='admin123'){ showAdmin(); return; }
+  let users=getUsers();
+  if(isLogin){ let f=users.find(u=>u.email===email&&u.pass===pass); if(f){ localStorage.setItem('current_user',email); showDash(f);} else alert('Wrong'); }
+  else{ if(!name){ alert('Name'); return;} if(users.find(u=>u.email===email)){ alert('Exists'); return;} let nu={name,email,pass,balance:50000,investments:[]}; users.push(nu); saveUsers(users); localStorage.setItem('current_user',email); showDash(nu); }
+}
+function showDash(user){ document.getElementById('auth').classList.add('hidden'); document.getElementById('admin').classList.add('hidden'); document.getElementById('dash').classList.remove('hidden'); document.getElementById('uName').innerText=user.name; document.getElementById('bal').innerText=user.balance.toLocaleString(); document.getElementById('myInv').innerHTML=user.investments.map(i=>`UGX ${i.amount.toLocaleString()} → UGX ${i.expect.toLocaleString()}<br>`).join('')||'No investments yet'; }
+function showAdmin(){ document.getElementById('auth').classList.add('hidden'); document.getElementById('dash').classList.add('hidden'); document.getElementById('admin').classList.remove('hidden'); document.getElementById('userTable').innerHTML=getUsers().map(u=>`${u.name} - ${u.email} - UGX ${u.balance}<br>`).join('')||'No users'; }
+function invest(amount,rate){ let email=localStorage.getItem('current_user'); let users=getUsers(); let idx=users.findIndex(u=>u.email===email); if(users[idx].balance<amount){ alert('Low balance, use MTN MoMo button'); return;} users[idx].balance-=amount; let expect=amount+(amount*rate); users[idx].investments.push({amount,expect}); saveUsers(users); showDash(users[idx]); setTimeout(()=>{ let u=getUsers(); let i=u.findIndex(x=>x.email===email); u[i].balance+=expect; saveUsers(u); if(localStorage.getItem('current_user')===email) showDash(u[i]); alert('Investment matured! +UGX '+expect.toLocaleString()); },5000); alert('Invested UGX '+amount); }
+
+function payMomo(amount,rate,network){
+  let phone=prompt(`Enter ${network} number (077... / 075...)\nAmount: UGX ${amount.toLocaleString()}`);
+  if(!phone || phone.length<10){ alert("Enter valid number"); return; }
+  
+  if(MTN_CONFIG.isReal){
+    payMomoReal(phone, amount); // REAL API CALL - edit below
+  } else {
+    alert(`DEMO: ${network} MoMo Prompt Sent to ${phone}\nAmount: UGX ${amount.toLocaleString()}\n\nUser will dial *165*2# or *185*9# to approve.\n\nThis is DEMO - no real charge. To make real, set isReal=true and add API key.`);
+    setTimeout(()=>{ if(confirm(`DEMO: Confirm ${network} payment of UGX ${amount} from ${phone}?`)){ invest(amount,rate); } },1000);
+  }
+}
+
+// REAL MTN MOMO FUNCTION - EDIT THIS WHEN YOU GET API KEY
+async function payMomoReal(phone, amount){
+  alert("Calling real MTN MoMo API for "+phone);
+  // Example code for real integration (needs backend):
+  // fetch('https://your-backend.com/momo/pay', { method:'POST', body: JSON.stringify({phone, amount}) })
+  // You need Node.js backend for real MTN - I can build it for you
+}
+
+function withdraw(){
+  let phone=prompt("Enter MoMo number to withdraw to:");
+  let amount=prompt("Amount to withdraw:");
+  if(phone && amount){ alert(`DEMO: Withdraw UGX ${amount} to ${phone} requested. Admin will approve.`); }
+}
+function logout(){ localStorage.removeItem('current_user'); document.getElementById('dash').classList.add('hidden'); document.getElementById('admin').classList.add('hidden'); document.getElementById('auth').classList.remove('hidden'); }
+</script>
+</body>
+</html>
